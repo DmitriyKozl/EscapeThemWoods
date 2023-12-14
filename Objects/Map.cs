@@ -4,9 +4,9 @@ using System.Text;
 
 namespace EscapeFromTheWoods
 {
-    public class Map
+    public struct Map
     {
-        public Map(int xmin, int xmax, int ymin, int ymax)
+        public Map(short xmin, short xmax, short ymin, short ymax)
         {
             this.xmin = xmin;
             this.xmax = xmax;
@@ -14,9 +14,9 @@ namespace EscapeFromTheWoods
             this.ymax = ymax;
         }
 
-        public int xmin { get; set; }
-        public int xmax { get; set; }
-        public int ymin { get; set; }
-        public int ymax { get; set; }
+        public short xmin { get; set; }
+        public short xmax { get; set; }
+        public short ymin { get; set; }
+        public short ymax { get; set; }
     }
 }

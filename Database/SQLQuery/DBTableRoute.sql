@@ -1,4 +1,5 @@
-﻿CREATE TABLE [dbo].[MonkeyRecords]
+﻿
+CREATE TABLE [dbo].[MonkeyRecords]
 (
 	[recordID] INT NOT NULL PRIMARY KEY IDENTITY(1,1), 
     [monkeyID] INT NOT NULL, 
