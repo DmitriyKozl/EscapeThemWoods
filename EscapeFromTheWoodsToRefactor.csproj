@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="NET\Console\" />
     <Folder Include="NET\monkeys\" />
   </ItemGroup>
 

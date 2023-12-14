@@ -26,25 +26,21 @@ namespace EscapeFromTheWoods {
             this.db = db;
         }
 
-        #region ToRefactor
-
         public async Task EscapeAsync(Map map) {
             List<List<Tree>> routes = new List<List<Tree>>();
-            foreach (var m in monkeys) {
+            foreach (Monkey m in monkeys) {
                 routes.Add(await EscapeMonkeyAsync(m, map));
             }
 
             WriteEscaperoutesToBitmap(routes);
         }
-        
-        public void PlaceMonkey(string monkeyName, int monkeyID)
-        {
+
+        public void PlaceMonkey(string monkeyName, int monkeyID) {
             int treeNr;
-            do
-            {
+            do {
                 treeNr = _r.Next(0, trees.Count - 1);
-            }
-            while (trees[treeNr].hasMonkey);
+            } while (trees[treeNr].hasMonkey);
+
             Monkey m = new Monkey(monkeyID, monkeyName, trees[treeNr]);
             monkeys.Add(m);
             trees[treeNr].hasMonkey = true;
@@ -54,7 +50,7 @@ namespace EscapeFromTheWoods {
         }
 
 
-        private async void WriteRouteToDbAsync(Monkey monkey, List<Tree> route) {
+        private async Task WriteRouteToDbAsync(Monkey monkey, List<Tree> route) {
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine($"{woodID}:write db routes {woodID},{monkey.name} start");
             List<DBMonkeyRecord> records = new List<DBMonkeyRecord>();
@@ -121,52 +117,111 @@ namespace EscapeFromTheWoods {
             Console.WriteLine($"{woodID}:write db wood {woodID} end");
         }
 
-        public async Task<List<Tree>> EscapeMonkeyAsync(Monkey monkey, Map map) {
+        public async Task<List<Tree>> EscapeMonkeyAsync(Monkey monkey, Map m) {
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"{woodID}:start {woodID},{monkey.name}");
-            Dictionary<int, bool> visited = new Dictionary<int, bool>();
-            trees.ForEach(x => visited.Add(x.treeID, false));
+
+            HashSet<int> visited = new HashSet<int>();
             List<Tree> route = new List<Tree>()
             { monkey.tree };
-            do {
-                visited[monkey.tree.treeID] = true;
-                SortedList<double, List<Tree>> distanceToMonkey = new SortedList<double, List<Tree>>();
 
-                //zoek dichtste boom die nog niet is bezocht            
-                foreach (Tree t in trees) {
-                    if ((!visited[t.treeID]) && (!t.hasMonkey)) {
-                        double d = Math.Sqrt(Math.Pow(t.x - monkey.tree.x, 2) + Math.Pow(t.y - monkey.tree.y, 2));
-                        if (distanceToMonkey.ContainsKey(d)) distanceToMonkey[d].Add(t);
-                        else
-                            distanceToMonkey.Add(d, new List<Tree>()
-                            { t });
-                    }
+            TreeGrid tg = new TreeGrid
+            (
+                5,
+                new Boundry
+                (
+                    m.xmin,
+                    m.ymin,
+                    m.xmax,
+                    m.ymax
+                ),
+                trees
+            );
+            int n = 25;
+            do {
+                visited.Add(monkey.tree.treeID);
+                SortedList<double, List<Tree>> distanceToMonkey = 
+                    new SortedList<double, List<Tree>>();
+
+                (int i, int j) = FindCell(monkey.tree.x, monkey.tree.y, tg);
+                ProcessCell(distanceToMonkey, tg, i, j, monkey, n, visited);
+                int ring = 0;
+
+                while (distanceToMonkey.Count < n) {
+                    ring++;
+                    ProcessRing(i, j, ring, distanceToMonkey, monkey, n, tg, visited);
                 }
+
+                ProcessRing(i, j, ring + 1, distanceToMonkey, monkey, n, tg, visited);
 
                 //distance to border            
                 //noord oost zuid west
                 double distanceToBorder = (new List<double>()
-                { map.ymax - monkey.tree.y,
-                  map.xmax - monkey.tree.x, monkey.tree.y - map.ymin, monkey.tree.x - map.xmin }).Min();
-                if (distanceToMonkey.Count == 0) {
-                    WriteRouteToDbAsync(monkey, route);
+                { 
+                  m.ymax - monkey.tree.y,
+                  m.xmax - monkey.tree.x,
+                  monkey.tree.y - m.ymin,
+                  monkey.tree.x - m.xmin 
+                }).Min();
+                if (distanceToMonkey.Count == 0 || distanceToBorder < distanceToMonkey.First().Key) {
+                    await  WriteRouteToDbAsync(monkey, route);
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.WriteLine($"{woodID}:end {woodID},{monkey.name}");
                     return route;
                 }
 
-                if (distanceToBorder < distanceToMonkey.First().Key) {
-                    WriteRouteToDbAsync(monkey, route);
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.WriteLine($"{woodID}:end {woodID},{monkey.name}");
-                    return route;
-                }
 
                 route.Add(distanceToMonkey.First().Value.First());
                 monkey.tree = distanceToMonkey.First().Value.First();
             } while (true);
         }
 
-        #endregion
+        private (int, int) FindCell(int x, int y, TreeGrid tg) {
+            if (!tg.Boundary.WithinBounds(x, y)) throw new ArgumentOutOfRangeException("out of bounds");
+            int i = ((x - tg.Boundary.MinX) / tg.Delta);
+            int j = ((y - tg.Boundary.MinY) / tg.Delta);
+            if (i == tg.NX) i--;
+            if (j == tg.NY) j--;
+            return (i, j);
+        }
+
+        private void ProcessCell(SortedList<double, List<Tree>> dtm, TreeGrid tg, int i, int j, Monkey m, int n,
+            HashSet<int> v) {
+            foreach (Tree t in tg.Trees[i][j]) {
+                if (!v.Contains(t.treeID) && (!t.hasMonkey)) {
+                    double d = Math.Sqrt(Math.Pow(t.x - m.tree.x, 2) + Math.Pow(t.y - m.tree.y, 2));
+                    if ((dtm.Count < n) || (d < dtm.Keys[dtm.Count - 1])) {
+                        if (dtm.ContainsKey(d)) dtm[d].Add(t);
+                        else {
+                            dtm.Add(d, new List<Tree>()
+                            { t });
+                        }
+                    }
+                }
+            }
+        }
+
+        private bool IsValidCell(int i, int j, TreeGrid tg) {
+            if ((j < 0) || (j >= tg.NY)) return false;
+            if ((i < 0) || (i >= tg.NX)) return false;
+            return true;
+        }
+
+        private void ProcessRing(int i, int j, int ring, SortedList<double, List<Tree>> dtm, Monkey m, int n,
+            TreeGrid tg, HashSet<int> v) {
+            for (int gx = i - ring; gx <= i + ring; gx++) {
+                int gy = j - ring;
+                if (IsValidCell(gx, gy, tg)) ProcessCell(dtm, tg, gx, gy, m, n, v);
+                gy = j + ring;
+                if (IsValidCell(gx, gy, tg)) ProcessCell(dtm, tg, gx, gy, m, n, v);
+            }
+
+            for (int gy = j - ring; gy <= j + ring - 1; gy++) {
+                int gx = i - ring;
+                if (IsValidCell(gx, gy, tg)) ProcessCell(dtm, tg, gx, gy, m, n, v);
+                gx = i + ring;
+                if (IsValidCell(gx, gy, tg)) ProcessCell(dtm, tg, gx, gy, m, n, v);
+            }
+        }
     }
 }
