@@ -127,7 +127,7 @@ namespace EscapeFromTheWoods {
 
             TreeGrid tg = new TreeGrid
             (
-                5,
+                10,
                 new Boundry
                 (
                     m.xmin,
