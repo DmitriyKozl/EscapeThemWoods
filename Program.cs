@@ -30,7 +30,7 @@ namespace EscapeFromTheWoods {
             w1.PlaceMonkey("Jos", IDgenerator.GetMonkeyID());
 
             Map m2 = new Map(0, 200, 0, 400);
-            Wood w2 = WoodBuilder.GetWood(2500, m2, path, db);
+            Wood w2 = WoodBuilder.GetWood(250, m2, path, db);
             w2.PlaceMonkey("Tom", IDgenerator.GetMonkeyID());
             w2.PlaceMonkey("Jerry", IDgenerator.GetMonkeyID());
             w2.PlaceMonkey("Tiffany", IDgenerator.GetMonkeyID());
@@ -38,7 +38,7 @@ namespace EscapeFromTheWoods {
             w2.PlaceMonkey("Jebus", IDgenerator.GetMonkeyID());
 
             Map m3 = new Map(0, 400, 0, 400);
-            Wood w3 = WoodBuilder.GetWood(20000, m3, path, db);
+            Wood w3 = WoodBuilder.GetWood(200, m3, path, db);
             w3.PlaceMonkey("Kelly", IDgenerator.GetMonkeyID());
             w3.PlaceMonkey("Kenji", IDgenerator.GetMonkeyID());
             w3.PlaceMonkey("Kobe", IDgenerator.GetMonkeyID());
